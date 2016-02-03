@@ -2,6 +2,7 @@
 
 var fs          = require('fs');
 var path        = require('path');
+
 var gulp        = require('gulp');
 var concat      = require('gulp-concat');
 var rename      = require('gulp-rename');
@@ -9,26 +10,33 @@ var watch       = require('gulp-watch');
 var sass        = require('gulp-sass');
 var template    = require('gulp-template');
 var notify      = require("gulp-notify");
+var streamify 	= require('gulp-streamify');
+var uglify		= require("gulp-uglify")
+var gutil 		= require('gulp-util');
 
 var browserify  = require('browserify');
+var watchify	= require('watchify');
 var babelify    = require('babelify');
 var source      = require('vinyl-source-stream');
 
 var __base_dir = './src/frontend/';
-var __target_dir = './public/resources/nativeAssets/';
+var __target_dir = './public/nativeAssets/';
 
 gulp.task('build_html', build_html);
 gulp.task('build_sass', build_sass);
 gulp.task('build_assets', build_assets);
 gulp.task('watch', onWatch);
-gulp.task('default', ['build_html', 'build_sass', 'build_assets', 'watch']);
+gulp.task('build_react', build_react);
+gulp.task('default', ['build_react', 'build_html', 'build_sass', 'build_assets', 'watch']);
 
 ///////////////////////////////////////////////////////////////
 
-function build_html(){
-	// copy_files(__dirname, base_dir('copy_src/*.html'), target_dir(''));
-	compile_files_concat(__dirname, base_dir('common/*.html'), target_dir('index.html'));
+function build_react(){
 	compile_jsx(__dirname, base_dir('main/index.jsx'), target_dir('index.js'))
+}
+
+function build_html(){
+	copy_files(__dirname, base_dir('copy_src/*.html'), target_dir(''));
 }
 
 function build_sass(){
@@ -41,13 +49,12 @@ function build_assets(){
 }
 
 function onWatch(){
-	gulp.watch([base_dir('**/*.html'), base_dir("**/*.jsx"), base_dir("**/*.js")], build_html);
+	gulp.watch([base_dir('**/*.html')], build_html);
 	gulp.watch([base_dir('**/[^_]?*.scss')], build_sass);
 	gulp.watch([base_dir('**/*')], build_assets);
 }
 
 ///////////////////////////////////////////////////////////////
-
 function compile_files_concat(root, src_files, dest_file){
 	return gulp.src(src_files)
 		.pipe(concat(path.basename(dest_file)))
@@ -67,55 +74,82 @@ function compile_sass_concat(root, src_files, dest_file){
 	return gulp.src(src_files)
 		.pipe(sass({includePaths: [__base_dir, base_dir('style')]}))
 		.on("error", notify.onError({
-	    	message: "Error: <%= error.message %>",
-	    	title: "Error running something"
-	    }))
+			message: "Error: <%= error.message %>",
+			title: "Error running something"
+		}))
 		.pipe(concat(path.basename(dest_file)))
 		.pipe(gulp.dest(path.dirname(dest_file)))
 		.pipe(notify({
-	        "title": "Success",
-	        // "subtitle": "<%= file.relative %>",
-	        "message": "<%= file.relative %>",
-	        "sound": "Frog", // case sensitive
-	        "onLast": true,
-	        "wait": true
-      }))
+			"title": "Success",
+			// "subtitle": "<%= file.relative %>",
+			"message": "<%= file.relative %>",
+			"sound": "Frog", // case sensitive
+			"onLast": true,
+			"wait": true
+	  }))
 }
 
-function compile_jsx(root, src_files, dest_file){
-	browserify({
+console.log(path.resolve(__dirname, __base_dir))
+
+//https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
+//http://stackoverflow.com/questions/29625182/gulp-browserify-takes-longer-to-compile-on-each-save-change
+function compile_jsx(root, src_files, dest_file, opt){
+	opt = opt || {};
+
+	let build = browserify({
 		entries: src_files,
 		extensions: ['.jsx', 'js'],
-		debug: true
+		debug: true,
+		paths: ['./node_modules', './src', './src/frontend']
 	  })
 	  .on("error", notify.onError({
-        message: "Error: <%= error.message %>",
-        title: "Error running something"
-      }))
-	  .transform(babelify)
+		message: "Error: <%= error.message %>",
+		title: "Error running something"
+	  }))
+	  .transform("babelify", {})
 	  .on("error", notify.onError({
-        message: "Error: <%= error.message %>",
-        title: "Error running something"
-      }))
-	  .bundle()
-	  .on("error", notify.onError({
-        message: "Error: <%= error.message %>",
-        title: "Error running something"
-      }))
-	  .pipe(source(path.basename(dest_file)))
-	  .pipe(gulp.dest(path.dirname(dest_file)))
-	  .pipe(notify({
-        "title": "Success",
-        // "subtitle": "<%= file.relative %>",
-        "message": "<%= file.relative %>",
-        "sound": "Frog", // case sensitive
-        "onLast": true,
-        "wait": true
-      }))
-      .on("error", notify.onError({
-        message: "Error: <%= error.message %>",
-        title: "Error running something"
-      }));
+		message: "Error: <%= error.message %>",
+		title: "Error running something"
+	  }))
+
+	let watch = watchify(build);
+	if(opt.watch){
+		watch.on('update', bundle);
+		watch.on('log', gutil.log)
+	}
+	bundle();
+
+	function bundle(){
+		var updateStart = Date.now();
+
+		let bundle = watch.bundle()
+		.on("error", notify.onError({
+			message: "Error: <%= error.message %>",
+			title: "Error running something"
+		}))
+		.pipe(source(path.basename(dest_file)))
+
+		if(opt.uglify){
+			bundle = bundle.pipe(streamify(uglify()))
+		}
+
+		bundle = bundle
+		.pipe(gulp.dest(path.dirname(dest_file)))
+		.pipe(notify({
+			"title": "Success",
+			// "subtitle": "<%= file.relative %>",
+			"message": ()=>`<%= file.relative %> (elapsed ${Date.now()-updateStart}ms)`,
+			"sound": "Frog", // case sensitive
+			"onLast": true,
+			"wait": true
+		}))
+		.on("error", notify.onError({
+			message: "Error: <%= error.message %>",
+			title: "Error running something"
+		}))
+
+		return bundle;
+	}
 }
 
 ///////////////////////////////////////////////////////////////
