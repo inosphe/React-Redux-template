@@ -1,9 +1,10 @@
 {
-  "name": "liverdiseasedb",
+  "name": "React-Redux-template",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "app-module-path": "^1.0.5",
     "babelify": "^6.3.0",
     "body-parser": "^1.9.2",
     "browserify": "^11.1.0",
@@ -41,14 +42,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/inosphe/LiverDiseaseDB.git"
+    "url": "https://github.com/inosphe/React-Redux-template.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/inosphe/LiverDiseaseDB/issues"
+    "url": "https://github.com/inosphe/React-Redux-template/issues"
   },
-  "homepage": "https://github.com/inosphe/LiverDiseaseDB",
+  "homepage": "https://github.com/inosphe/React-Redux-template",
   "devDependencies": {
     "redux-devtools": "^2.1.5"
   }
