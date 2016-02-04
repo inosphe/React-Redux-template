@@ -27,6 +27,7 @@ gulp.task('build_sass', build_sass);
 gulp.task('build_assets', build_assets);
 gulp.task('watch', onWatch);
 gulp.task('build_react', build_react);
+gulp.task('publish', build_publish);
 gulp.task('default', ['build_react', 'build_html', 'build_sass', 'build_assets', 'watch']);
 
 ///////////////////////////////////////////////////////////////
@@ -36,7 +37,7 @@ function build_react(){
 }
 
 function build_html(){
-	copy_files(__dirname, base_dir('copy_src/*.html'), target_dir(''));
+	compile_files_concat(__dirname, base_dir('common/index.html'), target_dir('index.html'));
 }
 
 function build_sass(){
@@ -46,6 +47,11 @@ function build_sass(){
 function build_assets(){
 	copy_files(__dirname, base_dir('**/*.svg'), target_dir('/'));
 	copy_files(__dirname, base_dir('**/*.jpg'), target_dir('/'));
+}
+
+function build_publish(){
+	build_sass();
+	compile_jsx(__dirname, base_dir('main/index.jsx'), target_dir('index.js'), {uglify: true, watch: false});
 }
 
 function onWatch(){
@@ -95,6 +101,8 @@ console.log(path.resolve(__dirname, __base_dir))
 //http://stackoverflow.com/questions/29625182/gulp-browserify-takes-longer-to-compile-on-each-save-change
 function compile_jsx(root, src_files, dest_file, opt){
 	opt = opt || {};
+	const use_uglify = opt.uglify === true;
+	const use_watch = opt.watch !== true;
 
 	let build = browserify({
 		entries: src_files,
@@ -113,7 +121,7 @@ function compile_jsx(root, src_files, dest_file, opt){
 	  }))
 
 	let watch = watchify(build);
-	if(opt.watch){
+	if(use_watch){
 		watch.on('update', bundle);
 		watch.on('log', gutil.log)
 	}
@@ -129,7 +137,7 @@ function compile_jsx(root, src_files, dest_file, opt){
 		}))
 		.pipe(source(path.basename(dest_file)))
 
-		if(opt.uglify){
+		if(use_uglify){
 			bundle = bundle.pipe(streamify(uglify()))
 		}
 
