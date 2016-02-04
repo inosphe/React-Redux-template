@@ -1,10 +1,12 @@
 import { combineReducers } from 'redux';
 import { routerStateReducer } from 'redux-router';
-import { reducer as sample } from './sample.decl'
+import { reducer as config } from './config.decl'
 
 const rootReducer = combineReducers({
-	sample
-	, router: routerStateReducer
+	router: routerStateReducer
+	, global: combineReducers({
+		config: config
+	})
 });
 
 export default rootReducer;

@@ -11,7 +11,7 @@ module.exports = function(app){
 	app.use(bodyParser.urlencoded({ extended: true }))
 	app.use(bodyParser.json());
 
-	app.use('/', express.static('./public/resources/nativeAssets', {index: false}));
+	app.use('/', express.static('./public/nativeAssets', {index: false}));
  	app.use(function(req, res, next){
 	 	res.render = render.bind(res);
 	 	res.renderIndex = renderIndex.bind(res);
@@ -19,7 +19,8 @@ module.exports = function(app){
  	});
 
  	function render(filename){
-		this.sendFile(path.resolve(app.rootdir, './public/resources/nativeAssets/' + filename));
+ 		console.log('render', filename);
+		this.sendFile(path.resolve(app.rootdir, './public/nativeAssets/' + filename));
 	}
 
 	function renderIndex(){
