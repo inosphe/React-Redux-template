@@ -1,1 +1,1 @@
-# React-Redux-template
+# Spostat
