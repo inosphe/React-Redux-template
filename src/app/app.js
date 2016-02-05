@@ -3,6 +3,7 @@ var _ = require('underscore');
 var path = require('path');
 var fs = require('fs');
 var Q = require('q');
+var promiseMapSeries = require('promise-map-series');
 
 Object.defineProperty(global, 'logger', {
 	value: console
@@ -22,13 +23,12 @@ module.exports = function(opt){
 	_.extend(app, opt);
 	app.helper = {};
 
-
-	init(['init', 'routers']);
-
 	app.config = getConfig('config.json');
 
 	app.init = function(){
-		return Q();
+		logger.log('* initializing ...');
+		return promiseMapSeries(['init', 'routers'], initFile)
+		.then(()=>logger.log('* init_comlete'))
 	}
 
 	app.start = function(){
@@ -44,41 +44,21 @@ module.exports = function(opt){
 
 	return app;
 
-	function init(files){
-		logger.log('* initializing ...');
+	function initFile(file){
 		var initialized = {};
-
-		var promises = [];
-
-		_.each(files, function(file){
-			var p = __init(file);
-			if(p){
-				promises.push(p);
-			}
-		});
-
-		logger.log('* init_comlete');
-
-		function __init(file){
-			if(path.extname(file) == ''){
-				__initFolder(file);
-			}
-			else{
-				return __initFile(file);
-			}
-		}
 
 		function __initFolder(folder){
 			var dir = path.resolve(app.rootdir + '/src', folder);
+			var promises = []
 			fs.readdirSync(dir).forEach(function(file){
 				if(file.search(/.*?\.js$/) != -1){
-					__initFile(dir + '/' + file);
+					promises.push(__initFile(dir + '/' + file));
 				}
 			})
+			return Q.all(promises);
 		}
 
 		function __initFile(file){
-			logger.log('__initFile', file);
 			var file = path.resolve(app.rootdir, file);
 			if(initialized[path.basename(file)]){
 				console.warn('! duplicated - ', path.basename(file));
@@ -90,11 +70,18 @@ module.exports = function(opt){
 				initialized[path.basename(file)] = true;
 
 				logger.log(file, 'initialized.');
-
+				return ret;
 			}
 			else{
 				logger.warn(file , 'is not function.');
 			}
+		}
+
+		if(path.extname(file) == ''){
+			return __initFolder(file);
+		}
+		else{
+			return __initFile(file);
 		}
 	}
 }

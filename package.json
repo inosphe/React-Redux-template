@@ -24,6 +24,7 @@
     "jquery": "^2.1.4",
     "moment": "^2.11.2",
     "node-sass": "^3.4.2",
+    "promise-map-series": "^0.2.2",
     "q": "^1.4.1",
     "react": "^0.14.2",
     "react-dom": "^0.14.2",
